@@ -333,7 +333,7 @@ int i2c_write(I2CDriver *sd, const uint8_t bytes[], size_t nn)
     size_t len = ((nn - i) < 64) ? (nn - i) : 64;
     uint8_t cmd[65] = {(uint8_t)(0xc0 + len - 1)};
     memcpy(cmd + 1, bytes + i, len);
-    writeToSerialPort(sd->port, cmd, 1 + len);
+    writeToSerialPort(sd->port, cmd, (int)(1 + len));
     ack = i2c_ack(sd);
   }
   crc_update(sd, bytes, nn);
@@ -348,7 +348,7 @@ void i2c_read(I2CDriver *sd, uint8_t bytes[], size_t nn)
     size_t len = ((nn - i) < 64) ? (nn - i) : 64;
     uint8_t cmd[1] = {(uint8_t)(0x80 + len - 1)};
     writeToSerialPort(sd->port, cmd, 1);
-    readFromSerialPort(sd->port, bytes + i, len);
+    readFromSerialPort(sd->port, bytes + i, (int)len);
     crc_update(sd, bytes + i, len);
   }
 }
@@ -361,6 +361,7 @@ void i2c_monitor(I2CDriver *sd, int enable)
 int i2c_commands(I2CDriver *sd, int argc, char *argv[])
 {
   int i;
+  uint8_t bytes[8192];
 
   for (i = 0; i < argc; i++) {
     char *token = argv[i];
@@ -407,11 +408,10 @@ int i2c_commands(I2CDriver *sd, int argc, char *argv[])
         unsigned int dev = strtol(token, NULL, 0);
 
         token = argv[++i];
-        uint8_t bytes[8192];
         char *endptr = token;
         size_t nn = 0;
         while (nn < sizeof(bytes)) {
-          bytes[nn++] = strtol(endptr, &endptr, 0);
+          bytes[nn++] = (uint8_t)strtol(endptr, &endptr, 0);
           if (*endptr == '\0')
             break;
           if (*endptr != ',') {
@@ -433,7 +433,6 @@ int i2c_commands(I2CDriver *sd, int argc, char *argv[])
 
         token = argv[++i];
         size_t nn = strtol(token, NULL, 0);
-        uint8_t bytes[8192];
 
         i2c_start(sd, dev, 1);
         i2c_read(sd, bytes, nn);
